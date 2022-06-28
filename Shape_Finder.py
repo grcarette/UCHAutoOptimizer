@@ -2,6 +2,21 @@ import numpy as np
 from matplotlib import pyplot as plt
 from anytree import Node, RenderTree, NodeMixin, LevelOrderIter
 
+def tuple_operation(a, b, op):
+    if op == '-':
+        return tuple(map(operator.sub, a, b))
+    elif op == '+': 
+        return tuple(map(operator.add, a, b))
+    elif op == 'mean':
+        return tuple(map(operator.truediv,(map(operator.add, a, b)),(2,2)))
+    elif op == '*':
+        return tuple(map(operator.mul, a, b))
+
+def plot_matrix(matrix):
+    plt.imshow(matrix)
+    plt.show()
+
+
 def produce_shape(opt_mat, shape_mat, position): 
     if opt_mat[position] != 0:
         iterable_size = (tuple([index -1 for index in np.shape(opt_mat)])) #np.shape produces shape of matrix starting from 1, change to start from 0
@@ -28,4 +43,7 @@ def find_shapes(opt_mat):
 if __name__ == "__main__":
     test_matrix = np.random.randint(2, size=(16,16))
     shape_list = find_shapes(test_matrix)
+    for shape in shape_list:
+        plot_matrix(shape)
+
     

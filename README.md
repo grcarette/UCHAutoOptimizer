@@ -1,0 +1,1 @@
+This program will take snapshot files of custom Ultimate Chicken Horse levels and return a fully block-optimized version of the level

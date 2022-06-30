@@ -1,3 +1,4 @@
+from cgi import test
 import numpy as np
 from matplotlib import pyplot as plt
 import itertools, operator
@@ -42,6 +43,7 @@ def crop_shape(shape):
 def shape_to_vertices(shape, origin):
     shape_b = shape[0:-1,0:-1]
     vertices = []
+    print(origin)
     for ind_col in range(np.size(shape_b,1)):
         for ind_row in range(np.size(shape_b,0)):
             sub_mat = shape[ind_row:ind_row+2,ind_col:ind_col+2]
@@ -49,13 +51,13 @@ def shape_to_vertices(shape, origin):
             if sub_mat_count == 0 or sub_mat_count == 4:
                 pass
             elif sub_mat_count == 1 or sub_mat_count == 3:
-                vertices.append((ind_col+0.5,ind_row+0.5))
+                vertices.append((ind_col+0.5-origin[0],ind_row+0.5-origin[2]))
             elif np.count_nonzero(sub_mat-sub_mat.T) == 0:
-                vertices.append((ind_col+0.5,ind_row+0.5))
-
+                vertices.append((ind_col+0.5+origin[0],ind_row+0.5+origin[2]))
+    plot_matrix(shape,vertices)
 
 if __name__ == "__main__":
-    test_matrix = np.random.randint(2, size=(128,128))
+    test_matrix = np.random.randint(2, size=(4,4))
     test_matrix = np.pad(test_matrix, pad_width = 1, mode='constant', constant_values=0)
     plot_matrix(test_matrix)
     shape_list = find_shapes(test_matrix)

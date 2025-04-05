@@ -48,7 +48,8 @@ class FileParser():
     
         boundaries = self.get_level_boundaries(root)
         block_array = self.create_block_array(boundaries)
-        self.add_blocks_to_array(root, boundaries, block_array)
+        color_grids = self.get_color_grids(root)
+        return color_grids
         
     def get_level_boundaries(self, root):
         boundaries = {}
@@ -73,7 +74,8 @@ class FileParser():
         block_array = np.zeros((num_rows, num_cols))
         return block_array
     
-    def add_blocks_to_array(self, root, boundaries, array):
+    def get_color_grids(self, root):
+        color_to_points = {}
         points = []
         optimizable_blocks = BLOCK_SHAPES.keys()
         for child in root:
@@ -86,6 +88,11 @@ class FileParser():
                 if blockID in optimizable_blocks:
                     block_data = BLOCK_SHAPES[blockID]
                     rotation = int(block['rZ'])
+                    color = (
+                        block['colR'], 
+                        block['colG'],
+                        block['colB']
+                        )
                     if blockID == 44:
                         rotation = (rotation + 180) % 360
                         print(rotation)
@@ -109,15 +116,19 @@ class FileParser():
                     
                     for x in range(width):
                         for y in range(height):
-                            points.append(((x_pos + x), (y_pos + y))) 
-                    
-        points_array = np.array(points)
-        grid = np.zeros((MAX_LEVEL_SIZE[1], MAX_LEVEL_SIZE[0]), dtype=int)
-        for x,y in points_array:
-            xi = int(round(x)) + X_OFFSET
-            yi = int(round(y)) + Y_OFFSET
-            grid[yi, xi] = 1
-        self.plot_matrix(grid)
+                            point = (x_pos + x, y_pos + y)
+                            color_to_points.setdefault(color, []).append(point)
+                            
+        color_grids =[]
+        for color, points in color_to_points.items():
+            grid = np.zeros((MAX_LEVEL_SIZE[1], MAX_LEVEL_SIZE[0]), dtype=int)
+            for x,y in points:
+                xi = int(round(x)) + X_OFFSET
+                yi = int(round(y)) + Y_OFFSET
+                if 0 <= xi < MAX_LEVEL_SIZE[0] and 0 <= yi < MAX_LEVEL_SIZE[1]:
+                    grid[yi, xi] = 1
+            color_grids.append((grid, color))
+        return color_grids
                 
     def plot_matrix(self, arr):
         # colours_float = {key: [float(val) for val in value] for key, value in self.colour_dict.items()}

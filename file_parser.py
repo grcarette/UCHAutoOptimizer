@@ -45,11 +45,18 @@ class FileParser():
         with lzma.open(file_path, 'rt', encoding='utf-8') as file:
             tree = ET.parse(file)
             root = tree.getroot()
+            
     
-        boundaries = self.get_level_boundaries(root)
-        block_array = self.create_block_array(boundaries)
-        color_grids = self.get_color_grids(root)
-        return color_grids
+        map_data = self.get_color_grids(root)
+        map_data['color_dict'] = self.reverse_color_dict(map_data['color_dict'])
+        print(map_data['config'])
+        print(map_data['unopt_blocks'])
+        
+        return map_data
+    
+    def reverse_color_dict(self, color_dict):
+        reversed_dict = {v: list(k) for k, v in color_dict.items()}
+        return reversed_dict
         
     def get_level_boundaries(self, root):
         boundaries = {}
@@ -76,8 +83,11 @@ class FileParser():
     
     def get_color_grids(self, root):
         color_to_points = {}
+        color_dict = {}
         points = []
         optimizable_blocks = BLOCK_SHAPES.keys()
+        unoptimizable_blocks = []
+        map_config = []
         for child in root:
             if child.tag == 'block':
                 block = child.attrib
@@ -86,16 +96,19 @@ class FileParser():
                 pY = float(block['pY'])
                 
                 if blockID in optimizable_blocks:
+                    if 'colR' in block:
+                        color = (
+                            block['colR'], 
+                            block['colG'],
+                            block['colB']
+                            )
+                        used_colors = color_dict.keys()
+                        if color not in used_colors:
+                            color_dict[color] = len(used_colors) + 1
                     block_data = BLOCK_SHAPES[blockID]
                     rotation = int(block['rZ'])
-                    color = (
-                        block['colR'], 
-                        block['colG'],
-                        block['colB']
-                        )
                     if blockID == 44:
                         rotation = (rotation + 180) % 360
-                        print(rotation)
                     if rotation == 0 or rotation == 180:
                         width = block_data['width']
                         height = block_data['height']
@@ -118,17 +131,32 @@ class FileParser():
                         for y in range(height):
                             point = (x_pos + x, y_pos + y)
                             color_to_points.setdefault(color, []).append(point)
+                else:
+                    unoptimizable_blocks.append(child)
+            else:
+                map_config.append(child)
                             
-        color_grids =[]
+        grid = np.zeros((MAX_LEVEL_SIZE[1], MAX_LEVEL_SIZE[0]), dtype=int)
+        
         for color, points in color_to_points.items():
-            grid = np.zeros((MAX_LEVEL_SIZE[1], MAX_LEVEL_SIZE[0]), dtype=int)
             for x,y in points:
                 xi = int(round(x)) + X_OFFSET
                 yi = int(round(y)) + Y_OFFSET
                 if 0 <= xi < MAX_LEVEL_SIZE[0] and 0 <= yi < MAX_LEVEL_SIZE[1]:
-                    grid[yi, xi] = 1
-            color_grids.append((grid, color))
-        return color_grids
+                    grid[yi, xi] = color_dict[color]
+        self.plot_matrix(grid)
+        padded_grid = np.pad(grid, pad_width=1, mode='constant', constant_values=0)
+        self.plot_matrix(padded_grid)
+        
+        scene_data = root.attrib
+        map_data = {
+            'grid': padded_grid,
+            'color_dict': color_dict,
+            'unopt_blocks': unoptimizable_blocks,
+            'config': map_config,
+            'scene_data': scene_data
+        }
+        return map_data
                 
     def plot_matrix(self, arr):
         # colours_float = {key: [float(val) for val in value] for key, value in self.colour_dict.items()}
@@ -137,19 +165,6 @@ class FileParser():
         plt.gca().invert_yaxis()
         plt.show()
 
-
-                
-        
-        
-
-        
-
-                    
-        
-                
-
-            
-            
 if __name__ == "__main__":
     file_path = 'testfile2.c.snapshot'
     fp = FileParser()

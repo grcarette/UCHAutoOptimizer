@@ -36,15 +36,15 @@ BLOCK_SHAPES = {
         'offset_y': 0,
     },
     46: {
-        'width': 2,
-        'height': 2,
-        'offset_x': 0,
-        'offset_y': 1,
-    },
-    47: {
         'width': 4,
         'height': 2,
         'offset_x': 1,
+        'offset_y': 1,
+    },
+    47: {
+        'width': 2,
+        'height': 2,
+        'offset_x': 0,
         'offset_y': 1,
     },
     48: {

@@ -3,12 +3,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
 class AutoOptimizer:
-    def __init__(self,arr):
+    def __init__(self,arr, colour_dict):
         self.arr = arr
         self.current_colour = 1
-        self.empty_block = 0
-        self.bg_block = 1
-        self.aesthetic_block = 2
         self.shape_list = []
         self.block_shapes = [ #[x,y,blockID,offsetX,offsetY,rz]
             [1,1,40,0,0,0],
@@ -31,14 +28,7 @@ class AutoOptimizer:
             [16,6,50,8,3,270]
         ]
         self.block_list = []
-        self.colour_dict = {
-            0 : ["0.2083694","0.291612","0.6911675"],
-            1 : ["0.1764706","0.1764706","0.1764706"],
-            2 : ["0.2039216","0.2039216","0.2039216"],
-            3 : ["0.253", "0.253", "0.253"],
-            4 : ["0.3308824", "0.3308824", "0.3308824"],
-            5 : ["0.1911765", "0.1084139", "0.07590831"]
-        }
+        self.colour_dict = colour_dict
         
         self.Optimize_Level()
             
@@ -50,38 +40,52 @@ class AutoOptimizer:
         plt.show()
         
     def Optimize_Level(self):
-        for colour in range(1, len(self.colour_dict)):
+        for colour in self.colour_dict.keys():
+            print('h', colour, self.colour_dict[colour], 'finding_shapes')
             self.current_colour = colour
             self.shape_list = []
-            self.Find_Shapes()
+            self.Find_Shapes(colour)
+            print(len(self.shape_list))
             
             for shape in self.shape_list:
-                self.Optimize_Shape(shape)
-        # self.Plot_Matrix(self.arr)
+                if len(shape) <= 25:
+                    self.Full_Optimize_Shape(shape)
+                else:
+                    self.Optimize_Shape(shape)
+        self.Plot_Matrix(self.arr)
             
-    def Find_Shapes(self):
+    def Find_Shapes(self, colour):
         arr_rows = np.size(self.arr,0)
         arr_cols = np.size(self.arr,1)
         tmp_arr = np.copy(self.arr)
         for col in range(arr_cols):
             for row in range(arr_rows):
-                if tmp_arr[row,col] == self.current_colour:
+                if tmp_arr[row,col] == colour:
                     self.shape_list.append((self.Produce_Shape(tmp_arr, (row,col))))
 
     def Produce_Shape(self, arr, position):
         shape = [position]
         queue = [position]
-        visited = 10
-        arr[position] = visited
-        while len(queue) != 0:
-            position = queue[0]
-            adjacent_tiles = [(position[0]+1, position[1]),(position[0]-1, position[1]),(position[0], position[1]+1),(position[0], position[1]-1)]
+        visited = set()  # Create a set to keep track of visited positions
+        visited.add(position)  # Mark the initial position as visited
+        
+        while queue:
+            current_position = queue.pop(0)
+            adjacent_tiles = [
+                (current_position[0] + 1, current_position[1]), 
+                (current_position[0] - 1, current_position[1]), 
+                (current_position[0], current_position[1] + 1), 
+                (current_position[0], current_position[1] - 1)
+            ]
+            
             for tile in adjacent_tiles:
-                if arr[tile] == self.current_colour:
-                    queue.append(tile)
-                    shape.append(tile)
-                    arr[tile] = visited
-            queue.remove(position)
+                if tile[0] >= 0 and tile[1] >= 0 and tile[0] < arr.shape[0] and tile[1] < arr.shape[1]:  # Check boundaries
+                    if arr[tile] == self.current_colour and tile not in visited:
+                        queue.append(tile)
+                        shape.append(tile)
+                        visited.add(tile)  # Mark this tile as visited
+        for pos in shape:
+            arr[pos] = 0
         return shape
         
     def Crop_Shape(self, shape):
@@ -103,7 +107,7 @@ class AutoOptimizer:
         for block in fitting_blocks:
             shape = [position for position in shape if position not in full_positions]
             full_positions.extend(self.Fit_Block(shape, block))
-    
+
     def Fit_Block(self, shape, block):
         full_positions = []
         for position in shape:
@@ -111,7 +115,6 @@ class AutoOptimizer:
                 self.block_list.append([position[1],position[0],block[2],block[3],block[4],block[5], self.current_colour])
                 self.arr[position[0]:position[0]+block[1],position[1]:position[1]+block[0]] = block[2]
                 full_positions.extend([pos for pos in shape if position[0] <= pos[0] <= position[0]+block[1] - 1 and position[1] <= pos[1] <= position[1]+block[0] - 1])
-                
         return full_positions
 
 if __name__ == "__main__":

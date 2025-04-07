@@ -6,11 +6,13 @@ import lzma
 import json
 import os
 
+from block_data import BLOCK_SHAPES, ROTATION_OFFSET
+
 class SnapshotCreator:
-    def __init__(self, optimizer, map_data, filepath):
+    def __init__(self, block_list, map_data, filepath):
         self.map_data = map_data   
         self.base_filepath = filepath
-        self.block_list = optimizer.block_list
+        self.block_list = block_list
         self.block_count = 7
         self.center_x = 0
         self.center_y = 1
@@ -18,7 +20,7 @@ class SnapshotCreator:
         self.ceilright_offset = 3
         self.start_offset = -0.5
         self.max_level_size = [88,110]
-        self.boundaries = [np.size(optimizer.arr, 1), np.size(optimizer.arr, 0)]
+        self.boundaries = [np.size(map_data['grid'], 1), np.size(map_data['grid'], 0)]
         self.offset_x = self.center_x - math.floor(self.boundaries[0]/2)
         self.offset_y = self.center_y - math.floor(self.boundaries[1]/2)
         
@@ -59,9 +61,37 @@ class SnapshotCreator:
         return scene
         
     def Add_Blocks(self, scene):
-        for block in self.block_list:
-            scene = self.Create_Block(scene, block[0], block[1],block[2],block[3],block[4],block[5],block[6])
+        for block_data in self.block_list:
+            pos = block_data[0]
+            block = block_data[1]
+            color = block_data[2]
+            block_id = block[2]
+            rotation = block[3]
+            block_offset_x, block_offset_y = self.get_block_offset(block_id, rotation)
+            
+            # scene = self.Create_Block(scene, pos[0], pos[1],block[0],block[1],block[2],block[3],color)
+            scene = self.Create_Block(scene, pos[1], pos[0], block_id, block_offset_x, block_offset_y, block[3], color)
         return scene
+    
+    def get_block_offset(self, blockID, rotation):
+        block_data = BLOCK_SHAPES[blockID]
+        if blockID == 44:
+            rotation = (rotation + 180) % 360
+        if rotation == 0 or rotation == 180:
+            width = block_data['width']
+            height = block_data['height']
+        else:
+            width = block_data['height']
+            height = block_data['width']
+        if width % 2 == 1:
+            x_offset = math.floor((width/2))
+        else:
+            x_offset = (width/2) + ROTATION_OFFSET[rotation]['x']
+        if height % 2 == 1:
+            y_offset = math.floor((height/2))
+        else:
+            y_offset = (height/2) + ROTATION_OFFSET[rotation]['y']
+        return x_offset, y_offset
 
             
     def get_filename(self, filepath):

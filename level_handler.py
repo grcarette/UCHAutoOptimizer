@@ -1,5 +1,6 @@
 from file_parser import FileParser
 from auto_optimizer import AutoOptimizer
+from optimizer import BlockOptimizer
 from file_writer import SnapshotCreator
 
 class LevelHander():
@@ -12,5 +13,6 @@ class LevelHander():
         
     def optimize_level(self):
         map_data = self.fp.parse_file(self.filepath)
-        ao = AutoOptimizer(map_data['grid'], map_data['color_dict'])
-        map_file = SnapshotCreator(ao, map_data, self.filepath)
+        bo = BlockOptimizer()
+        block_list = bo.optimize_level(map_data)
+        map_file = SnapshotCreator(block_list, map_data, self.filepath)

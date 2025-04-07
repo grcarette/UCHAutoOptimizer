@@ -5,7 +5,7 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-from block_data import BLOCK_SHAPES
+from block_data import BLOCK_SHAPES, ROTATION_OFFSET
 
 MAX_LEVEL_SIZE = (110,80)
 
@@ -16,25 +16,6 @@ RIGHT_WALL_OFFSET = -5
 
 X_OFFSET = 54
 Y_OFFSET = 39
-
-ROTATION_OFFSET = {
-    0: {
-        'x': -1,
-        'y': 0 
-    },
-    90: {
-        'x': -1,
-        'y': -1
-    },
-    180: {
-        'x': 0,
-        'y': -1
-    },
-    270: {
-        'x': 0,
-        'y': 0
-    }
-}
 
 class FileParser():
     def __init__(self):
@@ -169,3 +150,4 @@ if __name__ == "__main__":
     file_path = 'testfile2.c.snapshot'
     fp = FileParser()
     fp.parse_file(file_path)
+    

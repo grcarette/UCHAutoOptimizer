@@ -7,8 +7,8 @@ import heapq
 from solution import Solution
 
 BLOCK_SHAPES = [ #[x,y,blockID,offsetX,offsetY,rz]
-            [2,1,41],
-            [3,1,42],
+            # [2,1,41],
+            # [3,1,42],
             [4,1,43],
             [2,2,47],
             [8,1,44],
@@ -67,6 +67,7 @@ class ShapeOptimizer:
             efficiency = sol.assess_efficiency()
             if efficiency == self.best_efficiency:
                 print('Best solution: ')
+                print(sol.block_list)
                 # self.Plot_Matrix(sol.arr)
         print('BEST SOL')
         self.Plot_Matrix(self.best_solution.arr)
@@ -81,8 +82,10 @@ class ShapeOptimizer:
         self.existing_solutions.append(base_solution)
         
         permutations = self.search_handler(base_solution, color)
-        print('HERE', permutations)
-        self.display_results(permutations)
+        if len(permutations) == 1:
+            self.best_solution = permutations[0]
+        self.best_solution.add_smallest_box()
+        return self.best_solution.block_list
 
     def get_sorted_permutations(self, permutations, sort_by, block=None):
         if sort_by == 'eff':
@@ -100,27 +103,18 @@ class ShapeOptimizer:
         blocks = self.get_fitting_blocks(base_solution.shape_coords)
         
         max_depth = 3
-        trim = 10
+        trim = 1
         block_count = len(blocks)
         
         permutations = [base_solution]
-
-        if block_count < max_depth:
-            for block in blocks:
-                new_permutations = []
-                sorted_permutations = self.get_sorted_permutations(permutations, sort_by='eff')
-                for permutation in sorted_permutations:
-                    new_permutations.extend(self.find_block_permutations(block, color, permutation))
-                permutations.extend(new_permutations)
-
-        else:
-            for block in blocks:
-                new_permutations = []
-                sorted_pot_permutations = self.get_sorted_permutations(permutations, sort_by='pot', block=block)
-                trimmed_permutations = self.get_sorted_permutations(sorted_pot_permutations[:trim], sort_by='per')
-                for permutation in trimmed_permutations:
-                    new_permutations.extend(self.find_block_permutations(block, color, permutation))
-                permutations.extend(new_permutations)
+        
+        for block in blocks:
+            new_permutations = []
+            sorted_pot_permutations = self.get_sorted_permutations(permutations, sort_by='pot', block=block)
+            trimmed_permutations = self.get_sorted_permutations(sorted_pot_permutations[:trim], sort_by='per')
+            for permutation in trimmed_permutations:
+                new_permutations.extend(self.find_block_permutations(block, color, permutation))
+            permutations.extend(new_permutations)
         return permutations 
     
     def find_block_permutations(self, block, color, root):

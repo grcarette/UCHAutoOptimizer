@@ -61,14 +61,13 @@ class ShapeOptimizer:
     
     def display_results(self, permutations):
         print('Best efficiency: ', self.best_efficiency)
-        print('Solutions: ', len(self.existing_solutions))
+        print('Solutions: ', len(permutations))
         for sol in permutations:
             # self.Plot_Matrix(sol.arr)
             efficiency = sol.assess_efficiency()
             if efficiency == self.best_efficiency:
                 print('Best solution: ')
-                print(f'Generation: {sol.generation}')
-                self.Plot_Matrix(sol.arr)
+                # self.Plot_Matrix(sol.arr)
         print('BEST SOL')
         self.Plot_Matrix(self.best_solution.arr)
     
@@ -82,58 +81,26 @@ class ShapeOptimizer:
         self.existing_solutions.append(base_solution)
         
         permutations = self.search_handler(base_solution, color)
+        print('HERE', permutations)
         self.display_results(permutations)
-    
-    def get_next_gen_solutions(self, permutations):
-        sorted_eff_permutations = self.get_sorted_permutations(permutations, sort_by='eff')
-        sorted_bsr_permutations = self.get_sorted_permutations(permutations, sort_by='bsr')
-        
-        next_gen_solutions = []
-        seen_roots = set()
 
-        eff_perms, seen_roots = self.get_best_solutions(sorted_eff_permutations, seen_roots, target_length=10)
-        bsr_perms, seen_roots = self.get_best_solutions(sorted_bsr_permutations, seen_roots, target_length=5)
-        
-        next_gen_solutions.extend(eff_perms)
-        next_gen_solutions.extend(bsr_perms)
-                
-        return next_gen_solutions
-        
-    def get_sorted_permutations(self, permutations, sort_by):
+    def get_sorted_permutations(self, permutations, sort_by, block=None):
         if sort_by == 'eff':
             sorted_permutations = sorted(permutations, key=lambda solution: solution.assess_efficiency())
-        elif sort_by == 'bsr':
-            sorted_permutations = sorted(permutations, key=lambda solution: solution.assess_bsr(), reverse=True)
-        return sorted_permutations
-                
-    def get_best_solutions(self, permutation_list, seen_roots, target_length):
-        unique_permutations = []
-        i = 0
-        while i < len(permutation_list) and len(unique_permutations) < target_length:
-            permutation = permutation_list[i]
-            first_gen_root = self.get_first_generation_root(permutation)
-            first_gen_hash = self.hash_array(first_gen_root.arr)
-            if first_gen_hash not in seen_roots:
-                seen_roots.add(first_gen_hash)
-                unique_permutations.append(first_gen_root)
-            i += 1
-
-        return unique_permutations, seen_roots
-        
-    def get_first_generation_root(self, solution):
-        if solution.root != None:
-            if solution.root.root != None:
-                first_gen_root = solution.root.root
+        elif sort_by == 'pot':
+            if block:
+                sorted_permutations = sorted(permutations, key=lambda solution: solution.assess_potential_efficiency(block))
             else:
-                first_gen_root = solution.root
-        else:
-            first_gen_root = solution
-        return first_gen_root
-    
+                return None
+        elif sort_by == 'per':
+            sorted_permutations = sorted(permutations, key=lambda solution: solution.get_perimeter())
+        return sorted_permutations
+            
     def search_handler(self, base_solution, color):
         blocks = self.get_fitting_blocks(base_solution.shape_coords)
         
         max_depth = 3
+        trim = 10
         block_count = len(blocks)
         
         permutations = [base_solution]
@@ -143,56 +110,35 @@ class ShapeOptimizer:
                 new_permutations = []
                 sorted_permutations = self.get_sorted_permutations(permutations, sort_by='eff')
                 for permutation in sorted_permutations:
-                    new_permutations.extend(self.find_block_permutations(block, permutation, color))
+                    new_permutations.extend(self.find_block_permutations(block, color, permutation))
                 permutations.extend(new_permutations)
 
         else:
-            for i in range(block_count - max_depth + 1):
-                self.setup_generation(permutations)
-                next_blocks = blocks[i:i+max_depth]
-                for block in next_blocks:
-                    new_permutations = []
-                    sorted_permutations = self.get_sorted_permutations(permutations, sort_by='eff')
-                    for permutation in sorted_permutations:
-                        new_permutations.extend(self.find_block_permutations(block, color, i, root=permutation))
-                    permutations.extend(new_permutations)
-                sorted_permutations = self.get_sorted_permutations(permutations, sort_by='eff')
-                # print(f'BEST OF GENERATION {i}')
-                # print(f'BLOCKS: {next_blocks}')
-                # self.Plot_Matrix(sorted_permutations[0].arr)
-                # self.Plot_Matrix(sorted_permutations[0].root.arr)
-                if i + max_depth < block_count:
-                    next_gen_solutions = self.get_next_gen_solutions(permutations)
-                    print(len(next_gen_solutions))
-                    permutations = next_gen_solutions
+            for block in blocks:
+                new_permutations = []
+                sorted_pot_permutations = self.get_sorted_permutations(permutations, sort_by='pot', block=block)
+                trimmed_permutations = self.get_sorted_permutations(sorted_pot_permutations[:trim], sort_by='per')
+                for permutation in trimmed_permutations:
+                    new_permutations.extend(self.find_block_permutations(block, color, permutation))
+                permutations.extend(new_permutations)
         return permutations 
     
-    def setup_generation(self, next_gen_solutions):
-        self.existing_hashes.clear()
-        for sol in next_gen_solutions:
-            if self.is_new_shape(sol.arr):
-                sol_hash = self.hash_array(sol.arr)
-                self.existing_hashes.add(sol_hash)
-
-    def find_block_permutations(self, block, color, generation, root):
+    def find_block_permutations(self, block, color, root):
         permutations = [root]
         finding_solutions = True
         while finding_solutions:
             for solution in permutations:
-                new_permutations = self.iterate_over_shape(solution, block, color, generation, root)
+                new_permutations = self.iterate_over_shape(solution, block, color, root)
                 if len(new_permutations) == 0:
                     finding_solutions = False
                 else:
                     permutations.extend(new_permutations)
                     
         if root in permutations:
-            b = root
-            new_base = Solution(b.arr, b.shape_coords, b.block_list, b.color, b.generation, root)
             permutations.remove(root)
-            permutations.append(new_base)
         return permutations
 
-    def iterate_over_shape(self, solution, block, color, generation, root):
+    def iterate_over_shape(self, solution, block, color, root):
         arr = solution.arr
         
         potential_efficiency = solution.assess_potential_efficiency(block)
@@ -220,7 +166,7 @@ class ShapeOptimizer:
                         if self.is_new_shape(pos_arr):
                             coords = list(solution.shape_coords)
                             block_list = list(solution.block_list)
-                            new_solution = Solution(pos_arr, coords, block_list, color, generation, root)
+                            new_solution = Solution(pos_arr, coords, block_list, color, root)
                             new_solution.place_block((row, col), block)
                             new_solutions.append(new_solution)
                             self.existing_solutions.append(new_solution)
